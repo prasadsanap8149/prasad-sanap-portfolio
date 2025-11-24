@@ -10,6 +10,7 @@
     <title>Prasad Sanap - Software Engineer</title>
     
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/documents.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
@@ -35,6 +36,7 @@
                     <li><a href="#skills" class="nav-link">Skills</a></li>
                     <li><a href="#experience" class="nav-link">Experience</a></li>
                     <li><a href="#projects" class="nav-link">Projects</a></li>
+                    <li><a href="#documents" class="nav-link">Documents</a></li>
                     <li><a href="#contact" class="nav-link">Contact</a></li>
                 </ul>
             </div>
@@ -592,6 +594,27 @@
         </div>
     </section>
 
+    <!-- Documents & Certificates Section -->
+    <section id="documents" class="documents">
+        <div class="container">
+            <div class="documents-header">
+                <h2 class="section-title">Documents & Certificates</h2>
+                <div class="documents-info">
+                    <i class="fas fa-lock"></i>
+                    <p><strong>Secure Access:</strong> Preview available to everyone. Downloads require PIN verification for security.</p>
+                </div>
+            </div>
+
+            <div class="documents-grid" id="documentsGrid">
+                <!-- Generated dynamically by JavaScript -->
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                    <p>Loading documents...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Contact Section -->
     <section id="contact" class="contact">
         <div class="container">
@@ -658,5 +681,8 @@
     </footer>
 
     <script src="js/main.js"></script>
+    <script src="js/document-config.js"></script>
+    <script src="js/document-manager.js"></script>
+    <script src="js/documents-ui.js"></script>
 </body>
 </html>
