@@ -12,6 +12,12 @@
 
 class SecureDocumentManager {
   constructor() {
+    if (typeof DocumentConfig === "undefined") {
+      console.error(
+        "DocumentConfig not loaded. Make sure document-config.js is loaded before document-manager.js"
+      );
+      return;
+    }
     this.config = DocumentConfig;
     this.sessions = new Map();
     this.attempts = new Map();
@@ -52,6 +58,23 @@ class SecureDocumentManager {
         this.handleDownload(docPath, docName);
       }
 
+      // Download button inside preview modal (requires PIN)
+      if (e.target.classList.contains("preview-download-btn")) {
+        e.preventDefault();
+        const docPath = e.target.dataset.docPath;
+        const docName = e.target.dataset.docName;
+        this.handleDownload(docPath, docName);
+      }
+
+      // Retry button for failed preview
+      if (e.target.classList.contains("preview-retry-btn")) {
+        e.preventDefault();
+        const docPath = e.target.dataset.docPath;
+        const docName = e.target.dataset.docName;
+        this.closeModal();
+        setTimeout(() => this.handlePreview(docPath, docName), 500);
+      }
+
       if (e.target.classList.contains("pin-submit")) {
         e.preventDefault();
         this.submitPIN();
@@ -73,13 +96,25 @@ class SecureDocumentManager {
    */
   async handlePreview(docPath, docName) {
     try {
+      // Validate inputs
+      if (!docPath || !docName) {
+        this.log("Invalid preview parameters", "error");
+        this.showError("Invalid document information");
+        return;
+      }
+
       this.log(`Preview requested for: ${docName}`, "info");
 
       // Check if PIN required for preview
       if (this.config.SECURITY.REQUIRE_PIN_FOR_PREVIEW) {
         this.showPINPrompt("preview", docPath, docName);
       } else {
-        this.showPreview(docPath, docName);
+        try {
+          this.showPreview(docPath, docName);
+        } catch (previewError) {
+          this.log(`Preview loading error: ${previewError.message}`, "error");
+          this.showError(this.config.MESSAGES.PREVIEW_ERROR);
+        }
       }
     } catch (error) {
       this.log(`Preview error: ${error.message}`, "error");
@@ -91,26 +126,111 @@ class SecureDocumentManager {
    * Show document preview
    */
   showPreview(docPath, docName) {
-    // Check if file exists
+    // Validate path
     if (!this.validateDocumentPath(docPath)) {
+      this.log(`Invalid document path: ${docPath}`, "security");
       this.showError(this.config.MESSAGES.FILE_NOT_FOUND);
       return;
     }
 
-    // Create modal
+    // Create modal with loading state
     const modal = this.createPreviewModal(docPath, docName);
     document.body.appendChild(modal);
 
-    // Apply security measures
-    this.applyPreviewSecurity(modal);
-
-    // Log preview session
-    this.createSession(docPath, "preview");
-
-    // Show modal
+    // Show modal immediately with loader
     modal.style.display = "flex";
+    this.log(`Preview modal displayed for: ${docName}`, "info");
 
-    this.log(`Preview opened for: ${docName}`, "info");
+    // Setup iframe handlers
+    const iframe = modal.querySelector("iframe");
+    if (!iframe) {
+      this.log("iframe element not found in preview modal", "error");
+      this.showError(this.config.MESSAGES.PREVIEW_ERROR);
+      this.closeModal();
+      return;
+    }
+
+    // Show loader
+    const loader = modal.querySelector(".preview-loader");
+    if (loader) {
+      loader.style.display = "flex";
+    }
+
+    // Handle iframe load success
+    const onIframeLoad = () => {
+      this.log(`iframe loaded successfully for: ${docName}`, "info");
+
+      // Hide loader
+      if (loader) {
+        loader.style.display = "none";
+      }
+
+      // Apply security measures
+      this.applyPreviewSecurity(modal);
+
+      // Create session
+      this.createSession(docPath, "preview");
+
+      // Remove error handler temporarily
+      iframe.onerror = null;
+    };
+
+    // Handle iframe load error
+    const onIframeError = () => {
+      this.log(`iframe failed to load: ${docPath}`, "error");
+
+      // Hide loader
+      if (loader) {
+        loader.style.display = "none";
+      }
+
+      // Show error message
+      this.showError(
+        "Failed to load preview. Please try again or download the document."
+      );
+
+      // Show retry button
+      const content = modal.querySelector(".preview-content");
+      if (content) {
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "preview-error";
+        errorDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Unable to load preview</p>
+                    <button class="btn btn-secondary preview-retry-btn" data-doc-path="${this.escapeAttribute(
+                      docPath
+                    )}" data-doc-name="${this.escapeAttribute(docName)}">
+                        <i class="fas fa-redo"></i>
+                        Retry
+                    </button>
+                `;
+        content.appendChild(errorDiv);
+      }
+
+      // Close modal after delay
+      setTimeout(() => {
+        this.closeModal();
+      }, 2000);
+    };
+
+    // Attach handlers
+    iframe.onload = onIframeLoad;
+    iframe.onerror = onIframeError;
+
+    // Add timeout fallback (30 seconds)
+    const timeoutId = setTimeout(() => {
+      if (iframe.onload) {
+        this.log(`iframe load timeout for: ${docPath}`, "error");
+        onIframeError();
+      }
+    }, 30000);
+
+    // Clear timeout on successful load
+    const originalOnLoad = iframe.onload;
+    iframe.onload = () => {
+      clearTimeout(timeoutId);
+      originalOnLoad();
+    };
   }
 
   /**
@@ -119,6 +239,26 @@ class SecureDocumentManager {
   createPreviewModal(docPath, docName) {
     const modal = document.createElement("div");
     modal.className = "document-preview-modal";
+
+    // Construct iframe src with proper error handling
+    let iframeSrc = docPath;
+    try {
+      if (this.config.PREVIEW.VIEWER === "google-docs") {
+        const fullUrl = window.location.origin + "/" + docPath;
+        iframeSrc = `https://docs.google.com/gview?url=${encodeURIComponent(
+          fullUrl
+        )}&embedded=true`;
+      } else {
+        // Ensure proper path
+        if (!iframeSrc.startsWith("/") && !iframeSrc.startsWith("http")) {
+          iframeSrc = "/" + iframeSrc;
+        }
+      }
+    } catch (e) {
+      this.log(`Error constructing iframe src: ${e.message}`, "error");
+      iframeSrc = "/" + docPath;
+    }
+
     modal.innerHTML = `
             <div class="document-preview-container">
                 <div class="preview-header">
@@ -128,26 +268,37 @@ class SecureDocumentManager {
                     </button>
                 </div>
                 <div class="preview-content">
+                    <div class="preview-loader">
+                        <div class="loader-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <p>Loading document...</p>
+                    </div>
                     <iframe 
-                        src="${
-                          this.config.PREVIEW.VIEWER === "google-docs"
-                            ? `https://docs.google.com/gview?url=${encodeURIComponent(
-                                window.location.origin + "/" + docPath
-                              )}&embedded=true`
-                            : docPath
-                        }" 
+                        src="${iframeSrc}" 
                         title="Document Preview"
                         height="${this.config.PREVIEW.HEIGHT}"
                         width="${this.config.PREVIEW.WIDTH}"
                         class="document-viewer"
+                        sandbox="allow-same-origin"
+                        allowfullscreen="false"
+                        referrerpolicy="no-referrer"
                         oncontextmenu="return false;"
                     ></iframe>
                 </div>
                 <div class="preview-footer">
-                    <p class="preview-notice">
-                        <i class="fas fa-info-circle"></i>
-                        ${this.config.MESSAGES.SECURITY_WARNING}
-                    </p>
+                    <div class="preview-notice">
+                        <p>
+                            <i class="fas fa-info-circle"></i>
+                            ${this.config.MESSAGES.SECURITY_WARNING}
+                        </p>
+                    </div>
+                    <button class="btn btn-primary preview-download-btn" title="Download with PIN Protection" data-doc-path="${this.escapeAttribute(
+                      docPath
+                    )}" data-doc-name="${this.escapeAttribute(docName)}">
+                        <i class="fas fa-download"></i>
+                        Download with PIN
+                    </button>
                 </div>
             </div>
         `;

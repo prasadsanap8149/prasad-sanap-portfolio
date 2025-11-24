@@ -17,12 +17,15 @@ const DocumentConfig = {
    */
   PIN: {
     // Default development PIN (CHANGE IN PRODUCTION)
-    value: "1234",
+    value: "3136",
 
     // Environment detection
-    dev: "1234", // Development
-    staging: "5678", // Staging
-    prod: process.env.DOCUMENT_PIN || "3136", // Production (from env var)
+    dev: "3136", // Development
+    staging: "3136", // Staging
+    prod:
+      typeof process !== "undefined" && process.env?.DOCUMENT_PIN
+        ? process.env.DOCUMENT_PIN
+        : "3136", // Production (from env var)
 
     // Get current environment PIN
     getCurrent() {
