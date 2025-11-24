@@ -75,7 +75,7 @@ a:hover {
 
 .section-title {
     font-size: 2.5rem;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
     text-align: center;
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     -webkit-background-clip: text;
@@ -234,7 +234,7 @@ a:hover {
    ======================================== */
 
 .hero {
-    padding: 120px 20px 80px;
+    padding: 100px 20px 60px;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -270,14 +270,14 @@ a:hover {
 .hero .container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 4rem;
+    gap: 3rem;
     align-items: center;
     z-index: 1;
 }
 
 .hero-text h1 {
     font-size: 3.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.8rem;
     line-height: 1.2;
 }
 
@@ -285,20 +285,20 @@ a:hover {
     font-size: 1.5rem;
     color: var(--primary-color);
     font-weight: 600;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .hero-description {
     font-size: 1.1rem;
     color: var(--text-secondary);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     max-width: 500px;
 }
 
 .hero-buttons {
     display: flex;
     gap: 1rem;
-    margin-bottom: 2.5rem;
+    margin-bottom: 1.5rem;
     flex-wrap: wrap;
 }
 
@@ -399,32 +399,32 @@ a:hover {
    ======================================== */
 
 .about {
-    padding: 80px 20px;
+    padding: 60px 20px;
     background: var(--bg-darker);
 }
 
 .about-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 4rem;
+    gap: 3rem;
     align-items: start;
 }
 
 .about-text h3 {
     font-size: 2rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .about-text p {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     line-height: 1.8;
 }
 
 .about-stats {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-    margin-top: 2rem;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
 }
 
 .stat {
@@ -461,7 +461,7 @@ a:hover {
     padding: 2rem;
     border-radius: 12px;
     border: 1px solid var(--border-color);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     transition: var(--transition);
 }
 
@@ -472,12 +472,12 @@ a:hover {
 
 .info-card h4 {
     color: var(--primary-color);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     font-size: 1.2rem;
 }
 
 .info-item {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .info-item:last-child {
@@ -509,7 +509,7 @@ a:hover {
 .info-list li {
     display: flex;
     gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     color: var(--text-secondary);
 }
 
@@ -524,13 +524,13 @@ a:hover {
    ======================================== */
 
 .skills {
-    padding: 80px 20px;
+    padding: 60px 20px;
 }
 
 .skills-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 .skill-category {
@@ -585,7 +585,7 @@ a:hover {
    ======================================== */
 
 .experience {
-    padding: 80px 20px;
+    padding: 60px 20px;
     background: var(--bg-darker);
 }
 
@@ -607,8 +607,8 @@ a:hover {
 
 .timeline-item {
     display: flex;
-    gap: 3rem;
-    margin-bottom: 3rem;
+    gap: 2.5rem;
+    margin-bottom: 2rem;
     position: relative;
 }
 
@@ -714,13 +714,13 @@ a:hover {
    ======================================== */
 
 .projects {
-    padding: 80px 20px;
+    padding: 60px 20px;
 }
 
 .projects-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 2.5rem;
+    gap: 2rem;
 }
 
 .project-card {
@@ -818,14 +818,14 @@ a:hover {
    ======================================== */
 
 .professional-dev {
-    padding: 80px 20px;
+    padding: 60px 20px;
     background: var(--bg-darker);
 }
 
 .dev-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 .dev-card {
@@ -866,7 +866,7 @@ a:hover {
    ======================================== */
 
 .contact {
-    padding: 80px 20px;
+    padding: 60px 20px;
 }
 
 .contact-content {
@@ -876,7 +876,7 @@ a:hover {
 
 .contact-text {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
 }
 
 .contact-text h3 {
@@ -892,8 +892,8 @@ a:hover {
 .contact-methods {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    margin-bottom: 3rem;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .contact-method {
@@ -939,7 +939,7 @@ a:hover {
     display: flex;
     justify-content: center;
     gap: 1.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
 }
 
 .contact-social-btn {
@@ -1105,7 +1105,7 @@ a:hover {
 
     .about-content {
         grid-template-columns: 1fr;
-        gap: 2rem;
+        gap: 1.5rem;
     }
 
     .about-stats {
@@ -1114,6 +1114,7 @@ a:hover {
 
     .section-title {
         font-size: 2rem;
+        margin-bottom: 1.5rem;
     }
 
     .hero {
@@ -1178,7 +1179,7 @@ a:hover {
 
     .section-title {
         font-size: 1.8rem;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
     }
 
     .about-stats {
