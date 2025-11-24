@@ -1,0 +1,18 @@
+# robots.txt for Prasad Sanap's Portfolio
+# This file tells search engines how to crawl your site
+
+User-agent: *
+Allow: /
+Disallow: /assets/
+Disallow: /.git/
+Disallow: /.gitignore
+
+# Crawl rate
+Crawl-delay: 0
+
+# Sitemaps
+Sitemap: https://prasadsanap8149.github.io/prasad-sanap-portfolio/sitemap.xml
+
+# Comments for search engines
+# This portfolio is hosted on GitHub Pages
+# All content is publicly available

@@ -1,0 +1,69 @@
+# Git ignore file for portfolio project
+
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE specific files
+nbproject/
+*.sublime-project
+
+# Node modules (if using Node-based build tools)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+out/
+
+# Dependency directories
+vendor/
+
+# Jekyll
+_site/
+.sass-cache/
+.jekyll-metadata
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+temp/
+
+# OS Files
+.AppleDouble
+.LSOverride
+
+# OS X
+.AppleDouble
+.LSOverride
+
+# Windows
+.Thumbs.db
+Thumbs.db

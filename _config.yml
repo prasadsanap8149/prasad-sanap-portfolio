@@ -1,0 +1,38 @@
+theme: jekyll-theme-minimal
+title: Prasad Sanap - Software Engineer
+description: Full Stack Developer | Java • Spring Boot • Angular | 3+ Years Experience
+show_downloads: false
+google_analytics: false
+
+# Site settings
+url: "https://prasadsanap8149.github.io"
+baseurl: "/prasad-sanap-portfolio"
+repository: "prasadsanap8149/prasad-sanap-portfolio"
+
+# Build settings
+markdown: kramdown
+remote_theme: pages-themes/minimal@v0.2.0
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+
+# Collections
+collections:
+  projects:
+    output: true
+    permalink: /projects/:path/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+
+# SEO settings
+social:
+  name: Prasad Vitthal Sanap
+  links:
+    - https://linkedin.com/in/prasadsanap1b2a33217
+    - https://github.com/prasadsanap8149
