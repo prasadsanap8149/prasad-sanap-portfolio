@@ -5,6 +5,12 @@
 
 class DocumentsUIRenderer {
   constructor() {
+    if (typeof DocumentConfig === "undefined") {
+      console.error(
+        "DocumentConfig not loaded. Make sure document-config.js is loaded before documents-ui.js"
+      );
+      return;
+    }
     this.config = DocumentConfig;
     this.gridElement = null;
     this.init();
