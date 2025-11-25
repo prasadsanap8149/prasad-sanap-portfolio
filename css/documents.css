@@ -193,8 +193,29 @@
 
 .doc-preview-btn:disabled,
 .doc-download-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.7;
     cursor: not-allowed;
+    pointer-events: none;
+}
+
+.doc-preview-btn:disabled:hover,
+.doc-download-btn:disabled:hover {
+    transform: none;
+}
+
+/* Spinner animation for loading buttons */
+.doc-preview-btn .fa-spinner,
+.doc-download-btn .fa-spinner {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ========================================
@@ -242,6 +263,45 @@
     margin: 0;
     color: var(--text-primary);
     font-size: 1.2rem;
+    flex: 1;
+}
+
+.preview-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.preview-action-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.preview-action-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.preview-action-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.preview-action-btn .fa-spinner {
+    animation: spin 0.8s linear infinite;
 }
 
 .close-modal {
@@ -364,6 +424,20 @@
 
 .preview-notice i {
     color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.preview-actions-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.preview-print-btn-footer {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
     flex-shrink: 0;
 }
 
@@ -575,6 +649,32 @@
     .pin-prompt-body,
     .pin-prompt-footer {
         padding: 1rem;
+    }
+
+    .preview-header h3 {
+        font-size: 1rem;
+    }
+
+    .preview-header-actions {
+        gap: 0.25rem;
+    }
+
+    .preview-action-btn,
+    .close-modal {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+    }
+
+    .preview-actions-group {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .preview-print-btn-footer,
+    .preview-download-btn {
+        flex: 1;
+        justify-content: center;
     }
 
     .pin-prompt-container {

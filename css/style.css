@@ -73,6 +73,23 @@ a:hover {
    UTILITY CLASSES
    ======================================== */
 
+.reading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--bg-darker);
+    z-index: 9999;
+}
+
+.reading-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    width: 0%;
+    transition: width 0.1s ease;
+}
+
 .section-title {
     font-size: 2.5rem;
     margin-bottom: 1.5rem;
@@ -267,18 +284,61 @@ a:hover {
     pointer-events: none;
 }
 
-.hero .container {
+.hero-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 3rem;
+    gap: 4rem;
     align-items: center;
-    z-index: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
 .hero-text h1 {
     font-size: 3.5rem;
     margin-bottom: 0.8rem;
     line-height: 1.2;
+}
+
+.profile-photo-mobile {
+    display: none;
+    margin-bottom: 2rem;
+}
+
+.profile-photo-desktop {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto 2rem;
+    padding: 8px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: 50%;
+    box-shadow: 0 20px 60px rgba(99, 102, 241, 0.3);
+    animation: float 6s ease-in-out infinite;
+}
+
+.profile-image {
+    width: 100%;
+    height: auto;
+    border-radius: 50%;
+    display: block;
+    border: 4px solid var(--bg-dark);
+    object-fit: cover;
+    aspect-ratio: 1/1;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
 }
 
 .hero-subtitle {
@@ -405,7 +465,7 @@ a:hover {
 
 .about-content {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.2fr 0.8fr;
     gap: 3rem;
     align-items: start;
 }
@@ -456,13 +516,22 @@ a:hover {
     margin: 0;
 }
 
+.about-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    height: 100%;
+}
+
 .info-card {
     background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 12px;
     border: 1px solid var(--border-color);
-    margin-bottom: 0.8rem;
+    margin-bottom: 0;
     transition: var(--transition);
+    overflow: hidden;
+    flex: 1;
 }
 
 .info-card:hover {
@@ -488,12 +557,14 @@ a:hover {
     font-weight: 600;
     color: var(--text-primary);
     margin: 0 0 0.3rem 0;
+    word-break: break-word;
 }
 
 .info-subtitle {
     color: var(--primary-color);
     font-size: 0.9rem;
     margin: 0.2rem 0;
+    word-break: break-word;
 }
 
 .info-date {
@@ -511,6 +582,7 @@ a:hover {
     gap: 0.75rem;
     margin-bottom: 0.6rem;
     color: var(--text-secondary);
+    word-break: break-word;
 }
 
 .info-list i {
@@ -1086,8 +1158,8 @@ a:hover {
 
 .contact-methods {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
@@ -1097,8 +1169,10 @@ a:hover {
     border-radius: 12px;
     border: 1px solid var(--border-color);
     display: flex;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.8rem;
     transition: var(--transition);
+    overflow: hidden;
 }
 
 .contact-method:hover {
@@ -1108,22 +1182,24 @@ a:hover {
 }
 
 .contact-method i {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     color: var(--primary-color);
     flex-shrink: 0;
-    margin-top: 0.3rem;
 }
 
 .contact-method h4 {
     color: var(--text-primary);
-    margin-bottom: 0.5rem;
     margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
 }
 
 .contact-method a,
 .contact-method p {
     margin: 0;
     color: var(--text-secondary);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.6;
 }
 
 .contact-method a:hover {
@@ -1161,6 +1237,44 @@ a:hover {
 /* ========================================
    FOOTER
    ======================================== */
+
+.back-to-top {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+    transition: var(--transition);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(100px);
+}
+
+.back-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.back-to-top:hover {
+    transform: translateY(-5px) scale(1.1);
+    box-shadow: 0 15px 40px rgba(99, 102, 241, 0.4);
+}
+
+.back-to-top:active {
+    transform: translateY(-2px) scale(1.05);
+}
 
 .footer {
     background: var(--bg-darker);
@@ -1257,6 +1371,20 @@ a:hover {
         display: none;
     }
 
+    .profile-photo-desktop {
+        display: none;
+    }
+
+    .profile-photo-mobile {
+        display: block;
+        width: 200px;
+        margin: 0 auto 2rem;
+        padding: 6px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border-radius: 50%;
+        box-shadow: 0 15px 40px rgba(99, 102, 241, 0.3);
+    }
+
     .nav-links {
         position: fixed;
         top: 60px;
@@ -1300,11 +1428,21 @@ a:hover {
 
     .about-content {
         grid-template-columns: 1fr;
-        gap: 1.5rem;
+        gap: 2rem;
     }
 
     .about-stats {
         grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .hero-content {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .hero-visual {
+        order: -1;
     }
 
     .section-title {
@@ -1339,7 +1477,7 @@ a:hover {
     }
 
     .contact-methods {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
         gap: 1rem;
     }
 
@@ -1389,6 +1527,14 @@ a:hover {
     }
 
     .hero-description {
+        font-size: 1rem;
+    }
+
+    .back-to-top {
+        bottom: 1rem;
+        right: 1rem;
+        width: 45px;
+        height: 45px;
         font-size: 1rem;
     }
 

@@ -427,3 +427,53 @@ console.log(
   "%cReach out: prasadsanap8149@gmail.com",
   "font-size: 12px; color: #94a3b8;"
 );
+
+// ========================================
+// BACK TO TOP BUTTON
+// ========================================
+
+const backToTopBtn = document.getElementById("backToTop");
+
+if (backToTopBtn) {
+  // Show/hide button based on scroll position
+  window.addEventListener("scroll", function () {
+    if (window.pageYOffset > 300) {
+      backToTopBtn.classList.add("visible");
+    } else {
+      backToTopBtn.classList.remove("visible");
+    }
+  });
+
+  // Smooth scroll to top
+  backToTopBtn.addEventListener("click", function () {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  });
+}
+
+// ========================================
+// READING PROGRESS BAR
+// ========================================
+
+function createProgressBar() {
+  const progressBar = document.createElement("div");
+  progressBar.className = "reading-progress";
+  progressBar.innerHTML = '<div class="reading-progress-fill"></div>';
+  document.body.prepend(progressBar);
+
+  window.addEventListener("scroll", function () {
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollPercent = (scrollTop / (documentHeight - windowHeight)) * 100;
+
+    const fillElement = document.querySelector(".reading-progress-fill");
+    if (fillElement) {
+      fillElement.style.width = scrollPercent + "%";
+    }
+  });
+}
+
+createProgressBar();

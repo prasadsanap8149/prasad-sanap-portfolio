@@ -66,6 +66,20 @@ class SecureDocumentManager {
         this.handleDownload(docPath, docName);
       }
 
+      // Print button inside preview modal
+      if (e.target.classList.contains("preview-print-btn") || 
+          e.target.classList.contains("preview-print-btn-footer")) {
+        e.preventDefault();
+        const docPath = e.target.dataset.docPath;
+        this.handlePrint(docPath);
+      }
+
+      // Fullscreen toggle button
+      if (e.target.classList.contains("preview-fullscreen-btn")) {
+        e.preventDefault();
+        this.toggleFullscreen();
+      }
+
       // Retry button for failed preview
       if (e.target.classList.contains("preview-retry-btn")) {
         e.preventDefault();
@@ -82,6 +96,19 @@ class SecureDocumentManager {
 
       if (e.target.classList.contains("close-modal")) {
         e.preventDefault();
+        this.closeModal();
+      }
+    });
+
+    // Handle Enter key in PIN input
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target.id === "pin-input") {
+        e.preventDefault();
+        this.submitPIN();
+      }
+      
+      // ESC key to close modals
+      if (e.key === "Escape") {
         this.closeModal();
       }
     });
@@ -249,10 +276,12 @@ class SecureDocumentManager {
           fullUrl
         )}&embedded=true`;
       } else {
-        // Ensure proper path
+        // Ensure proper path with #toolbar=0 to hide default toolbar
         if (!iframeSrc.startsWith("/") && !iframeSrc.startsWith("http")) {
           iframeSrc = "/" + iframeSrc;
         }
+        // Add toolbar parameter for PDF
+        iframeSrc = iframeSrc + "#toolbar=0&navpanes=0&scrollbar=1";
       }
     } catch (e) {
       this.log(`Error constructing iframe src: ${e.message}`, "error");
@@ -263,9 +292,19 @@ class SecureDocumentManager {
             <div class="document-preview-container">
                 <div class="preview-header">
                     <h3>${this.escapeHTML(docName)}</h3>
-                    <button class="close-modal" title="Close">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <div class="preview-header-actions">
+                        <button class="preview-action-btn preview-print-btn" title="Print Document" data-doc-path="${this.escapeAttribute(
+                          docPath
+                        )}">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button class="preview-action-btn preview-fullscreen-btn" title="Toggle Fullscreen">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button class="close-modal" title="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="preview-content">
                     <div class="preview-loader">
@@ -280,8 +319,9 @@ class SecureDocumentManager {
                         height="${this.config.PREVIEW.HEIGHT}"
                         width="${this.config.PREVIEW.WIDTH}"
                         class="document-viewer"
-                        sandbox="allow-same-origin"
-                        allowfullscreen="false"
+                        id="document-preview-iframe"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
+                        allowfullscreen="true"
                         referrerpolicy="no-referrer"
                         oncontextmenu="return false;"
                     ></iframe>
@@ -293,12 +333,20 @@ class SecureDocumentManager {
                             ${this.config.MESSAGES.SECURITY_WARNING}
                         </p>
                     </div>
-                    <button class="btn btn-primary preview-download-btn" title="Download with PIN Protection" data-doc-path="${this.escapeAttribute(
-                      docPath
-                    )}" data-doc-name="${this.escapeAttribute(docName)}">
-                        <i class="fas fa-download"></i>
-                        Download with PIN
-                    </button>
+                    <div class="preview-actions-group">
+                        <button class="btn btn-secondary preview-print-btn-footer" title="Print Document" data-doc-path="${this.escapeAttribute(
+                          docPath
+                        )}">
+                            <i class="fas fa-print"></i>
+                            Print
+                        </button>
+                        <button class="btn btn-primary preview-download-btn" title="Download with PIN Protection" data-doc-path="${this.escapeAttribute(
+                          docPath
+                        )}" data-doc-name="${this.escapeAttribute(docName)}">
+                            <i class="fas fa-download"></i>
+                            Download with PIN
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -349,6 +397,152 @@ class SecureDocumentManager {
    */
 
   /**
+   * Handle print request (requires PIN)
+   */
+  handlePrint(docPath, docName) {
+    try {
+      this.log(`Print requested for: ${docName}`, "info");
+
+      // Check rate limiting
+      if (!this.checkRateLimit(docName)) {
+        this.showError(this.config.MESSAGES.PIN_ATTEMPTS_EXCEEDED);
+        return;
+      }
+
+      // Always require PIN for print
+      this.showPINPrompt("print", docPath, docName);
+    } catch (error) {
+      this.log(`Print error: ${error.message}`, "error");
+      this.showError("Unable to print document. Please try again.");
+    }
+  }
+
+  /**
+   * Perform actual print after PIN verification
+   */
+  performPrint(docPath, docName) {
+    try {
+      // Validate path
+      if (!this.validateDocumentPath(docPath)) {
+        this.showError(this.config.MESSAGES.FILE_NOT_FOUND);
+        this.log(`Invalid document path: ${docPath}`, "security");
+        return;
+      }
+
+      // Show spinner on all print buttons for this document
+      const allButtons = document.querySelectorAll("button");
+      const printBtns = Array.from(allButtons).filter((btn) => {
+        const classes = btn.className || "";
+        const onclick = btn.getAttribute("onclick") || "";
+        const dataPath = btn.getAttribute("data-doc-path") || "";
+        return (
+          (classes.includes("print-btn") || onclick.includes("handlePrint")) &&
+          dataPath.includes(docPath)
+        );
+      });
+
+      printBtns.forEach((btn) => {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        // Restore button after print dialog
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+          btn.disabled = false;
+        }, 1000);
+      });
+
+      // Get the iframe
+      const iframe = document.getElementById("document-preview-iframe");
+      if (!iframe) {
+        // Open in new window if iframe not available
+        const printWindow = window.open(docPath, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          };
+          this.log(`Document opened in new window for printing: ${docName}`, "print");
+        } else {
+          this.showError("Please allow pop-ups to print this document");
+        }
+        return;
+      }
+
+      // Try to print the iframe content
+      try {
+        iframe.contentWindow.print();
+        this.log(`Print dialog opened successfully for: ${docName}`, "print");
+        this.showSuccess("Print dialog opened");
+      } catch (printError) {
+        // Fallback: open in new window and print
+        this.log(
+          `Direct print failed, using fallback: ${printError.message}`,
+          "info"
+        );
+        const printWindow = window.open(docPath, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          };
+        } else {
+          this.showError(
+            "Please allow pop-ups to print this document"
+          );
+        }
+      }
+    } catch (error) {
+      this.log(`Print execution error: ${error.message}`, "error");
+      this.showError("Unable to print document. Please try again.");
+    }
+  }
+
+  /**
+   * Toggle fullscreen for preview
+   */
+  toggleFullscreen() {
+    const modal = document.querySelector(".document-preview-modal");
+    const container = document.querySelector(".document-preview-container");
+    const btn = document.querySelector(".preview-fullscreen-btn i");
+
+    if (!modal || !container) return;
+
+    if (!document.fullscreenElement) {
+      // Enter fullscreen
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
+      } else if (container.msRequestFullscreen) {
+        container.msRequestFullscreen();
+      }
+
+      if (btn) {
+        btn.className = "fas fa-compress";
+      }
+      this.log("Entered fullscreen mode", "info");
+    } else {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+
+      if (btn) {
+        btn.className = "fas fa-expand";
+      }
+      this.log("Exited fullscreen mode", "info");
+    }
+  }
+
+  /**
    * Handle download request
    */
   async handleDownload(docPath, docName) {
@@ -361,12 +555,8 @@ class SecureDocumentManager {
         return;
       }
 
-      // Show PIN prompt for download
-      if (this.config.SECURITY.REQUIRE_PIN_FOR_DOWNLOAD) {
-        this.showPINPrompt("download", docPath, docName);
-      } else {
-        this.performDownload(docPath, docName);
-      }
+      // Always require PIN for download
+      this.showPINPrompt("download", docPath, docName);
     } catch (error) {
       this.log(`Download error: ${error.message}`, "error");
       this.showError(this.config.MESSAGES.DOWNLOAD_ERROR);
@@ -385,26 +575,42 @@ class SecureDocumentManager {
         return;
       }
 
-      // Create download link
-      const link = document.createElement("a");
-      link.href = docPath;
-      link.download = this.config.DOWNLOAD.ADD_TIMESTAMP
-        ? `${docName.replace(".pdf", "")}_${Date.now()}.pdf`
-        : docName;
-
-      // Add security headers via fetch if needed
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Log download
-      this.log(`Document downloaded: ${docName}`, "download", {
-        path: docPath,
-        timestamp: new Date().toISOString(),
-        location: this.getLocationInfo(),
+      // Show spinner on all download buttons for this document
+      const allButtons = document.querySelectorAll("button");
+      const downloadBtns = Array.from(allButtons).filter((btn) => {
+        const onclick = btn.getAttribute("onclick") || "";
+        return (
+          onclick.includes("handleDownload") && onclick.includes(docName)
+        );
       });
 
-      this.showSuccess(this.config.MESSAGES.DOWNLOAD_SUCCESS);
+      downloadBtns.forEach((btn) => {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        // Create download link after a short delay
+        setTimeout(() => {
+          const link = document.createElement("a");
+          link.href = docPath;
+          link.download = this.config.DOWNLOAD.ADD_TIMESTAMP
+            ? `${docName.replace(".pdf", "")}_${Date.now()}.pdf`
+            : docName;
+
+          // Add security headers via fetch if needed
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          // Restore button
+          btn.innerHTML = originalHTML;
+          btn.disabled = false;
+
+          // Log download
+          this.showSuccess("Document downloaded successfully!");
+          this.log(`Download completed: ${docName}`, "download");
+        }, 500);
+      });
     } catch (error) {
       this.log(`Download execution error: ${error.message}`, "error");
       this.showError(this.config.MESSAGES.DOWNLOAD_ERROR);
@@ -759,6 +965,13 @@ class SecureDocumentManager {
       "'": "&#039;",
     };
     return text.replace(/[&<>"']/g, (m) => map[m]);
+  }
+
+  /**
+   * Escape HTML attributes
+   */
+  escapeAttribute(text) {
+    return text.replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
 
   /**
