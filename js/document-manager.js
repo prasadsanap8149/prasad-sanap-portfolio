@@ -71,7 +71,8 @@ class SecureDocumentManager {
           e.target.classList.contains("preview-print-btn-footer")) {
         e.preventDefault();
         const docPath = e.target.dataset.docPath;
-        this.handlePrint(docPath);
+        const docName = e.target.dataset.docName || e.target.closest('.document-preview-container')?.querySelector('.preview-header h3')?.textContent || 'document';
+        this.handlePrint(docPath, docName);
       }
 
       // Fullscreen toggle button
@@ -276,16 +277,41 @@ class SecureDocumentManager {
           fullUrl
         )}&embedded=true`;
       } else {
-        // Ensure proper path with #toolbar=0 to hide default toolbar
+        // Smart path resolution for both localhost and GitHub Pages
         if (!iframeSrc.startsWith("/") && !iframeSrc.startsWith("http")) {
-          iframeSrc = "/" + iframeSrc;
+          // Get the base path from current location
+          const currentPath = window.location.pathname;
+          const pathSegments = currentPath.split('/').filter(p => p && !p.includes('.'));
+          
+          if (window.location.hostname.includes('github.io')) {
+            // GitHub Pages: Use repository name as base
+            const repoName = pathSegments.length > 0 ? pathSegments[0] : '';
+            if (repoName) {
+              iframeSrc = "/" + repoName + "/" + iframeSrc;
+            } else {
+              iframeSrc = "/" + iframeSrc;
+            }
+          } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            // Localhost: Check if there's a subdirectory
+            if (pathSegments.length > 0) {
+              // Running from subdirectory like /prasad-sanap-portfolio/
+              iframeSrc = "/" + pathSegments[0] + "/" + iframeSrc;
+            } else {
+              // Running from root
+              iframeSrc = "/" + iframeSrc;
+            }
+          } else {
+            // Other environments: use absolute path from root
+            iframeSrc = "/" + iframeSrc;
+          }
         }
         // Add toolbar parameter for PDF
         iframeSrc = iframeSrc + "#toolbar=0&navpanes=0&scrollbar=1";
       }
     } catch (e) {
       this.log(`Error constructing iframe src: ${e.message}`, "error");
-      iframeSrc = "/" + docPath;
+      // Fallback: try relative path
+      iframeSrc = docPath;
     }
 
     modal.innerHTML = `
@@ -295,7 +321,7 @@ class SecureDocumentManager {
                     <div class="preview-header-actions">
                         <button class="preview-action-btn preview-print-btn" title="Print Document" data-doc-path="${this.escapeAttribute(
                           docPath
-                        )}">
+                        )}" data-doc-name="${this.escapeAttribute(docName)}">
                             <i class="fas fa-print"></i>
                         </button>
                         <button class="preview-action-btn preview-fullscreen-btn" title="Toggle Fullscreen">
@@ -336,7 +362,7 @@ class SecureDocumentManager {
                     <div class="preview-actions-group">
                         <button class="btn btn-secondary preview-print-btn-footer" title="Print Document" data-doc-path="${this.escapeAttribute(
                           docPath
-                        )}">
+                        )}" data-doc-name="${this.escapeAttribute(docName)}">
                             <i class="fas fa-print"></i>
                             Print
                         </button>
@@ -433,11 +459,10 @@ class SecureDocumentManager {
       const allButtons = document.querySelectorAll("button");
       const printBtns = Array.from(allButtons).filter((btn) => {
         const classes = btn.className || "";
-        const onclick = btn.getAttribute("onclick") || "";
         const dataPath = btn.getAttribute("data-doc-path") || "";
         return (
-          (classes.includes("print-btn") || onclick.includes("handlePrint")) &&
-          dataPath.includes(docPath)
+          (classes.includes("preview-print-btn") || classes.includes("preview-print-btn-footer")) &&
+          dataPath === docPath
         );
       });
 
@@ -453,11 +478,35 @@ class SecureDocumentManager {
         }, 1000);
       });
 
+      // Build full path for printing using same logic as preview
+      let fullDocPath = docPath;
+      if (!fullDocPath.startsWith("/") && !fullDocPath.startsWith("http")) {
+        const currentPath = window.location.pathname;
+        const pathSegments = currentPath.split('/').filter(p => p && !p.includes('.'));
+        
+        if (window.location.hostname.includes('github.io')) {
+          const repoName = pathSegments.length > 0 ? pathSegments[0] : '';
+          if (repoName) {
+            fullDocPath = "/" + repoName + "/" + fullDocPath;
+          } else {
+            fullDocPath = "/" + fullDocPath;
+          }
+        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          if (pathSegments.length > 0) {
+            fullDocPath = "/" + pathSegments[0] + "/" + fullDocPath;
+          } else {
+            fullDocPath = "/" + fullDocPath;
+          }
+        } else {
+          fullDocPath = "/" + fullDocPath;
+        }
+      }
+
       // Get the iframe
       const iframe = document.getElementById("document-preview-iframe");
       if (!iframe) {
         // Open in new window if iframe not available
-        const printWindow = window.open(docPath, "_blank");
+        const printWindow = window.open(fullDocPath, "_blank");
         if (printWindow) {
           printWindow.onload = () => {
             setTimeout(() => {
@@ -482,7 +531,7 @@ class SecureDocumentManager {
           `Direct print failed, using fallback: ${printError.message}`,
           "info"
         );
-        const printWindow = window.open(docPath, "_blank");
+        const printWindow = window.open(fullDocPath, "_blank");
         if (printWindow) {
           printWindow.onload = () => {
             setTimeout(() => {
@@ -578,9 +627,11 @@ class SecureDocumentManager {
       // Show spinner on all download buttons for this document
       const allButtons = document.querySelectorAll("button");
       const downloadBtns = Array.from(allButtons).filter((btn) => {
-        const onclick = btn.getAttribute("onclick") || "";
+        const classes = btn.className || "";
+        const dataPath = btn.getAttribute("data-doc-path") || "";
         return (
-          onclick.includes("handleDownload") && onclick.includes(docName)
+          (classes.includes("doc-download-btn") || classes.includes("preview-download-btn")) &&
+          dataPath === docPath
         );
       });
 
@@ -591,8 +642,32 @@ class SecureDocumentManager {
 
         // Create download link after a short delay
         setTimeout(() => {
+          // Build full path using same logic as preview and print
+          let fullDocPath = docPath;
+          if (!fullDocPath.startsWith("/") && !fullDocPath.startsWith("http")) {
+            const currentPath = window.location.pathname;
+            const pathSegments = currentPath.split('/').filter(p => p && !p.includes('.'));
+            
+            if (window.location.hostname.includes('github.io')) {
+              const repoName = pathSegments.length > 0 ? pathSegments[0] : '';
+              if (repoName) {
+                fullDocPath = "/" + repoName + "/" + fullDocPath;
+              } else {
+                fullDocPath = "/" + fullDocPath;
+              }
+            } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+              if (pathSegments.length > 0) {
+                fullDocPath = "/" + pathSegments[0] + "/" + fullDocPath;
+              } else {
+                fullDocPath = "/" + fullDocPath;
+              }
+            } else {
+              fullDocPath = "/" + fullDocPath;
+            }
+          }
+
           const link = document.createElement("a");
-          link.href = docPath;
+          link.href = fullDocPath;
           link.download = this.config.DOWNLOAD.ADD_TIMESTAMP
             ? `${docName.replace(".pdf", "")}_${Date.now()}.pdf`
             : docName;
@@ -632,6 +707,14 @@ class SecureDocumentManager {
 
     const modal = document.createElement("div");
     modal.className = "pin-prompt-modal";
+    
+    let actionLabel = action === "download" ? "Download" : action === "print" ? "Print" : "Preview";
+    let actionMessage = action === "download" 
+      ? "Your PIN is required for document downloads." 
+      : action === "print"
+      ? "Your PIN is required for document printing."
+      : "Your PIN is required for document access.";
+    
     modal.innerHTML = `
             <div class="pin-prompt-container">
                 <div class="pin-prompt-header">
@@ -655,14 +738,12 @@ class SecureDocumentManager {
                     />
                     <p class="pin-info">
                         <i class="fas fa-lock"></i>
-                        Your PIN is required for document downloads. This action is logged for security purposes.
+                        ${actionMessage} This action is logged for security purposes.
                     </p>
                 </div>
                 <div class="pin-prompt-footer">
                     <button class="btn btn-secondary close-modal">Cancel</button>
-                    <button class="btn btn-primary pin-submit">Verify & ${
-                      action === "download" ? "Download" : "Preview"
-                    }</button>
+                    <button class="btn btn-primary pin-submit">Verify & ${actionLabel}</button>
                 </div>
             </div>
         `;
