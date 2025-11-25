@@ -153,7 +153,7 @@ class SecureDocumentManager {
   /**
    * Show document preview
    */
-  showPreview(docPath, docName) {
+  async showPreview(docPath, docName) {
     // Validate path
     if (!this.validateDocumentPath(docPath)) {
       this.log(`Invalid document path: ${docPath}`, "security");
@@ -169,24 +169,18 @@ class SecureDocumentManager {
     modal.style.display = "flex";
     this.log(`Preview modal displayed for: ${docName}`, "info");
 
-    // Setup iframe handlers
-    const iframe = modal.querySelector("iframe");
-    if (!iframe) {
-      this.log("iframe element not found in preview modal", "error");
-      this.showError(this.config.MESSAGES.PREVIEW_ERROR);
-      this.closeModal();
-      return;
-    }
-
     // Show loader
     const loader = modal.querySelector(".preview-loader");
     if (loader) {
       loader.style.display = "flex";
     }
 
-    // Handle iframe load success
-    const onIframeLoad = () => {
-      this.log(`iframe loaded successfully for: ${docName}`, "info");
+    try {
+      // Build full path for PDF
+      let fullDocPath = this.buildFullPath(docPath);
+
+      // Load PDF using PDF.js
+      await this.loadPDFWithPDFJS(fullDocPath, modal);
 
       // Hide loader
       if (loader) {
@@ -199,13 +193,9 @@ class SecureDocumentManager {
       // Create session
       this.createSession(docPath, "preview");
 
-      // Remove error handler temporarily
-      iframe.onerror = null;
-    };
-
-    // Handle iframe load error
-    const onIframeError = () => {
-      this.log(`iframe failed to load: ${docPath}`, "error");
+      this.log(`PDF loaded successfully for: ${docName}`, "info");
+    } catch (error) {
+      this.log(`PDF loading error: ${error.message}`, "error");
 
       // Hide loader
       if (loader) {
@@ -213,9 +203,7 @@ class SecureDocumentManager {
       }
 
       // Show error message
-      this.showError(
-        "Failed to load preview. Please try again or download the document."
-      );
+      this.showError("Failed to load preview. Please try again or download the document.");
 
       // Show retry button
       const content = modal.querySelector(".preview-content");
@@ -223,42 +211,123 @@ class SecureDocumentManager {
         const errorDiv = document.createElement("div");
         errorDiv.className = "preview-error";
         errorDiv.innerHTML = `
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Unable to load preview</p>
-                    <button class="btn btn-secondary preview-retry-btn" data-doc-path="${this.escapeAttribute(
-                      docPath
-                    )}" data-doc-name="${this.escapeAttribute(docName)}">
-                        <i class="fas fa-redo"></i>
-                        Retry
-                    </button>
-                `;
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Unable to load preview: ${this.escapeHTML(error.message)}</p>
+          <button class="btn btn-secondary preview-retry-btn" data-doc-path="${this.escapeAttribute(
+            docPath
+          )}" data-doc-name="${this.escapeAttribute(docName)}">
+            <i class="fas fa-redo"></i>
+            Retry
+          </button>
+        `;
         content.appendChild(errorDiv);
       }
+    }
+  }
 
-      // Close modal after delay
-      setTimeout(() => {
-        this.closeModal();
-      }, 2000);
-    };
+  /**
+   * Build full path for document
+   */
+  buildFullPath(docPath) {
+    if (docPath.startsWith("http://") || docPath.startsWith("https://")) {
+      return docPath;
+    }
 
-    // Attach handlers
-    iframe.onload = onIframeLoad;
-    iframe.onerror = onIframeError;
-
-    // Add timeout fallback (30 seconds)
-    const timeoutId = setTimeout(() => {
-      if (iframe.onload) {
-        this.log(`iframe load timeout for: ${docPath}`, "error");
-        onIframeError();
+    if (!docPath.startsWith("/") && !docPath.startsWith("http")) {
+      const currentPath = window.location.pathname;
+      const pathSegments = currentPath.split('/').filter(p => p && !p.includes('.'));
+      
+      if (window.location.hostname.includes('github.io')) {
+        const repoName = pathSegments.length > 0 ? pathSegments[0] : '';
+        if (repoName) {
+          return window.location.origin + "/" + repoName + "/" + docPath;
+        } else {
+          return window.location.origin + "/" + docPath;
+        }
+      } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        if (pathSegments.length > 0) {
+          return window.location.origin + "/" + pathSegments[0] + "/" + docPath;
+        } else {
+          return window.location.origin + "/" + docPath;
+        }
+      } else {
+        return window.location.origin + "/" + docPath;
       }
-    }, 30000);
+    }
 
-    // Clear timeout on successful load
-    const originalOnLoad = iframe.onload;
-    iframe.onload = () => {
-      clearTimeout(timeoutId);
-      originalOnLoad();
-    };
+    return window.location.origin + docPath;
+  }
+
+  /**
+   * Load PDF using PDF.js library
+   */
+  async loadPDFWithPDFJS(pdfUrl, modal) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Check if PDF.js is loaded
+        if (typeof pdfjsLib === 'undefined') {
+          throw new Error('PDF.js library not loaded');
+        }
+
+        // Set worker path
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Get container
+        const pdfContainer = modal.querySelector('.pdf-canvas-container');
+        if (!pdfContainer) {
+          throw new Error('PDF container not found');
+        }
+
+        // Load PDF document
+        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        const pdf = await loadingTask.promise;
+
+        this.log(`PDF loaded: ${pdf.numPages} pages`, 'info');
+
+        // Render all pages
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          
+          // Create canvas for this page
+          const canvas = document.createElement('canvas');
+          canvas.className = 'pdf-page-canvas';
+          const context = canvas.getContext('2d');
+
+          // Calculate scale to fit container width
+          const container = modal.querySelector('.preview-content');
+          const containerWidth = container.clientWidth - 40; // padding
+          const viewport = page.getViewport({ scale: 1 });
+          const scale = containerWidth / viewport.width;
+          const scaledViewport = page.getViewport({ scale: scale });
+
+          // Set canvas dimensions
+          canvas.height = scaledViewport.height;
+          canvas.width = scaledViewport.width;
+
+          // Render page
+          const renderContext = {
+            canvasContext: context,
+            viewport: scaledViewport
+          };
+
+          await page.render(renderContext).promise;
+          
+          // Add page separator
+          if (pageNum > 1) {
+            const separator = document.createElement('div');
+            separator.className = 'pdf-page-separator';
+            pdfContainer.appendChild(separator);
+          }
+
+          pdfContainer.appendChild(canvas);
+        }
+
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   /**
@@ -267,52 +336,6 @@ class SecureDocumentManager {
   createPreviewModal(docPath, docName) {
     const modal = document.createElement("div");
     modal.className = "document-preview-modal";
-
-    // Construct iframe src with proper error handling
-    let iframeSrc = docPath;
-    try {
-      if (this.config.PREVIEW.VIEWER === "google-docs") {
-        const fullUrl = window.location.origin + "/" + docPath;
-        iframeSrc = `https://docs.google.com/gview?url=${encodeURIComponent(
-          fullUrl
-        )}&embedded=true`;
-      } else {
-        // Smart path resolution for both localhost and GitHub Pages
-        if (!iframeSrc.startsWith("/") && !iframeSrc.startsWith("http")) {
-          // Get the base path from current location
-          const currentPath = window.location.pathname;
-          const pathSegments = currentPath.split('/').filter(p => p && !p.includes('.'));
-          
-          if (window.location.hostname.includes('github.io')) {
-            // GitHub Pages: Use repository name as base
-            const repoName = pathSegments.length > 0 ? pathSegments[0] : '';
-            if (repoName) {
-              iframeSrc = "/" + repoName + "/" + iframeSrc;
-            } else {
-              iframeSrc = "/" + iframeSrc;
-            }
-          } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            // Localhost: Check if there's a subdirectory
-            if (pathSegments.length > 0) {
-              // Running from subdirectory like /prasad-sanap-portfolio/
-              iframeSrc = "/" + pathSegments[0] + "/" + iframeSrc;
-            } else {
-              // Running from root
-              iframeSrc = "/" + iframeSrc;
-            }
-          } else {
-            // Other environments: use absolute path from root
-            iframeSrc = "/" + iframeSrc;
-          }
-        }
-        // Add toolbar parameter for PDF
-        iframeSrc = iframeSrc + "#toolbar=0&navpanes=0&scrollbar=1";
-      }
-    } catch (e) {
-      this.log(`Error constructing iframe src: ${e.message}`, "error");
-      // Fallback: try relative path
-      iframeSrc = docPath;
-    }
 
     modal.innerHTML = `
             <div class="document-preview-container">
@@ -339,18 +362,7 @@ class SecureDocumentManager {
                         </div>
                         <p>Loading document...</p>
                     </div>
-                    <iframe 
-                        src="${iframeSrc}" 
-                        title="Document Preview"
-                        height="${this.config.PREVIEW.HEIGHT}"
-                        width="${this.config.PREVIEW.WIDTH}"
-                        class="document-viewer"
-                        id="document-preview-iframe"
-                        sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
-                        allowfullscreen="true"
-                        referrerpolicy="no-referrer"
-                        oncontextmenu="return false;"
-                    ></iframe>
+                    <div class="pdf-canvas-container"></div>
                 </div>
                 <div class="preview-footer">
                     <div class="preview-notice">
@@ -502,10 +514,40 @@ class SecureDocumentManager {
         }
       }
 
-      // Get the iframe
-      const iframe = document.getElementById("document-preview-iframe");
-      if (!iframe) {
-        // Open in new window if iframe not available
+      // Try to print using the canvas-rendered PDF
+      const pdfContainer = document.querySelector('.pdf-canvas-container');
+      
+      if (pdfContainer && pdfContainer.children.length > 0) {
+        // Create a print window with the rendered canvases
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write('<html><head><title>Print Document</title>');
+          printWindow.document.write('<style>');
+          printWindow.document.write('body { margin: 0; padding: 0; }');
+          printWindow.document.write('canvas { display: block; width: 100%; page-break-after: always; }');
+          printWindow.document.write('</style></head><body>');
+          
+          // Add all canvas elements as images
+          Array.from(pdfContainer.querySelectorAll('canvas')).forEach(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            printWindow.document.write(`<img src="${imgData}" style="width: 100%; display: block; page-break-after: always;" />`);
+          });
+          
+          printWindow.document.write('</body></html>');
+          printWindow.document.close();
+          
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+          }, 500);
+          
+          this.log(`Print dialog opened successfully for: ${docName}`, "print");
+          this.showSuccess("Print dialog opened");
+        } else {
+          this.showError("Please allow pop-ups to print this document");
+        }
+      } else {
+        // Fallback: open PDF in new window and print
         const printWindow = window.open(fullDocPath, "_blank");
         if (printWindow) {
           printWindow.onload = () => {
@@ -516,32 +558,6 @@ class SecureDocumentManager {
           this.log(`Document opened in new window for printing: ${docName}`, "print");
         } else {
           this.showError("Please allow pop-ups to print this document");
-        }
-        return;
-      }
-
-      // Try to print the iframe content
-      try {
-        iframe.contentWindow.print();
-        this.log(`Print dialog opened successfully for: ${docName}`, "print");
-        this.showSuccess("Print dialog opened");
-      } catch (printError) {
-        // Fallback: open in new window and print
-        this.log(
-          `Direct print failed, using fallback: ${printError.message}`,
-          "info"
-        );
-        const printWindow = window.open(fullDocPath, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            setTimeout(() => {
-              printWindow.print();
-            }, 500);
-          };
-        } else {
-          this.showError(
-            "Please allow pop-ups to print this document"
-          );
         }
       }
     } catch (error) {
