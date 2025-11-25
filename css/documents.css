@@ -248,7 +248,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     z-index: 2000;
     align-items: center;
     justify-content: center;
@@ -261,11 +261,12 @@
     background: var(--bg-card);
     border-radius: 12px;
     width: 100%;
-    max-width: 900px;
+    max-width: 1000px;
+    height: 90vh;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     overflow: hidden;
 }
 
@@ -276,6 +277,7 @@
     justify-content: space-between;
     align-items: center;
     background: linear-gradient(135deg, var(--bg-darker), var(--bg-card));
+    flex-shrink: 0;
 }
 
 .preview-header h3 {
@@ -283,6 +285,7 @@
     color: var(--text-primary);
     font-size: 1.2rem;
     flex: 1;
+    font-weight: 600;
 }
 
 .preview-header-actions {
@@ -364,12 +367,14 @@
 
 .preview-content {
     flex-grow: 1;
-    overflow: auto;
+    overflow: hidden;
     background: var(--bg-darker);
     position: relative;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: stretch;
+    min-height: 500px;
+    max-height: calc(90vh - 200px);
 }
 
 .preview-loader {
@@ -383,6 +388,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 10;
+    pointer-events: none;
 }
 
 .loader-spinner {
@@ -414,6 +420,7 @@
     gap: 1.5rem;
     padding: 2rem;
     text-align: center;
+    width: 100%;
 }
 
 .preview-error i {
@@ -433,8 +440,12 @@
 
 .document-viewer {
     width: 100%;
+    height: 100%;
+    min-height: 500px;
     border: none;
     display: block;
+    flex: 1;
+    background: white;
 }
 
 .preview-footer {
@@ -447,6 +458,7 @@
     gap: 1rem;
     flex-wrap: wrap;
     min-height: 72px;
+    flex-shrink: 0;
 }
 
 .preview-notice {
@@ -767,7 +779,17 @@
     }
 
     .document-preview-container {
+        height: 95vh;
         max-height: 95vh;
+    }
+
+    .preview-content {
+        min-height: 400px;
+        max-height: calc(95vh - 250px);
+    }
+
+    .document-viewer {
+        min-height: 400px;
     }
 
     .preview-header,
